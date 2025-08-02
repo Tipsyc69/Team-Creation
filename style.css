@@ -6,17 +6,17 @@
 }
 
 :root {
-    --primary-color: #00ff88;
-    --secondary-color: #ff0080;
-    --accent-color: #0080ff;
-    --background-dark: #0a0a0a;
+    --primary-color: #ff0000;
+    --secondary-color: #ff0000;
+    --accent-color: #ff0000;
+    --background-dark: #000000;
     --background-card: #1a1a1a;
     --text-primary: #ffffff;
     --text-secondary: #cccccc;
-    --border-color: #333333;
-    --success-color: #00ff88;
-    --danger-color: #ff4444;
-    --warning-color: #ffaa00;
+    --border-color: #ff0000;
+    --success-color: #000000;
+    --danger-color: #000000;
+    --warning-color: #501f1f;
 }
 
 body {
@@ -171,11 +171,12 @@ body::before {
 
 .stars {
     display: flex;
-    gap: 5px;
+    gap: 3px;
+    flex-wrap: wrap;
 }
 
 .stars i {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     color: var(--border-color);
     cursor: pointer;
     transition: all 0.2s ease;
@@ -303,7 +304,7 @@ body::before {
 
 .player-rating i {
     color: var(--warning-color) !important;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
 }
 
 .player-rating i:not(.active) {
@@ -461,7 +462,7 @@ body::before {
 
 .team-player-rating i {
     color: var(--warning-color) !important;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
 }
 
 .team-player-rating i:not(.active) {
