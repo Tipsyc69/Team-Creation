@@ -1,16 +1,22 @@
 // Variables globales
 let players = [];
-let currentRating = 3;
+let savedPlayers = JSON.parse(localStorage.getItem('savedPlayers') || '[]');
 
 // Éléments DOM
 const playerNameInput = document.getElementById('playerName');
 const starsContainer = document.querySelector('.stars');
 const ratingValue = document.getElementById('ratingValue');
 const addPlayerBtn = document.getElementById('addPlayer');
+const addPlayerRowBtn = document.getElementById('addPlayerRow');
+const addAllPlayersBtn = document.getElementById('addAllPlayers');
 const playersList = document.getElementById('playersList');
 const playerCount = document.getElementById('playerCount');
 const generateTeamsBtn = document.getElementById('generateTeams');
 const clearAllBtn = document.getElementById('clearAll');
+const shuffleTeamsBtn = document.getElementById('shuffleTeams');
+const exportPlayersBtn = document.getElementById('exportPlayers');
+const importPlayersBtn = document.getElementById('importPlayers');
+const importFileInput = document.getElementById('importFile');
 const teamsModal = document.getElementById('teamsModal');
 const teamsDisplay = document.getElementById('teamsDisplay');
 const closeModal = document.querySelector('.close');
@@ -19,47 +25,36 @@ const playersPerTeamSelect = document.getElementById('playersPerTeam');
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', function() {
-    initializeStars();
     setupEventListeners();
     updatePlayerCount();
+    loadSavedPlayers();
+    updateGenerateButton();
+    setupLevelButtons();
 });
 
-// Configuration du système d'étoiles
-function initializeStars() {
-    const stars = starsContainer.querySelectorAll('i');
-    
-    // Définir la note initiale
-    updateStars(5);
-    
-    // Ajouter les événements de clic
-    stars.forEach(star => {
-        star.addEventListener('click', function() {
-            const rating = parseInt(this.dataset.rating);
-            currentRating = rating;
-            updateStars(rating);
-            console.log('Rating sélectionné:', rating); // Debug
+// Configuration des boutons de niveau
+function setupLevelButtons() {
+    // Ajouter les événements pour les boutons de niveau existants
+    document.querySelectorAll('.level-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const row = this.closest('.input-row');
+            const levelButtons = row.querySelectorAll('.level-btn');
+            levelButtons.forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
         });
     });
 }
 
-function updateStars(rating) {
-    const stars = starsContainer.querySelectorAll('i');
-    stars.forEach((star, index) => {
-        if (index < rating) {
-            star.classList.add('active');
-        } else {
-            star.classList.remove('active');
-        }
-    });
-    ratingValue.textContent = rating;
-    console.log('Étoiles mises à jour:', rating); // Debug
-}
-
 // Configuration des événements
 function setupEventListeners() {
-    addPlayerBtn.addEventListener('click', addPlayer);
+    addPlayerRowBtn.addEventListener('click', addPlayerRow);
+    addAllPlayersBtn.addEventListener('click', addAllPlayers);
     clearAllBtn.addEventListener('click', clearAllPlayers);
     generateTeamsBtn.addEventListener('click', generateTeams);
+    shuffleTeamsBtn.addEventListener('click', shuffleTeams);
+    exportPlayersBtn.addEventListener('click', exportPlayers);
+    importPlayersBtn.addEventListener('click', importPlayers);
+    importFileInput.addEventListener('change', handleFileImport);
     closeModal.addEventListener('click', closeTeamsModal);
     
     // Fermer le modal en cliquant à l'extérieur
@@ -69,51 +64,125 @@ function setupEventListeners() {
         }
     });
     
-    // Ajouter un joueur avec Entrée
-    playerNameInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            addPlayer();
-        }
-    });
-    
     // Mettre à jour le bouton quand la configuration change
     teamCountSelect.addEventListener('change', updateGenerateButton);
     playersPerTeamSelect.addEventListener('change', updateGenerateButton);
+    
+    // Prévisualisation en temps réel
+    teamCountSelect.addEventListener('change', showPreview);
+    playersPerTeamSelect.addEventListener('change', showPreview);
 }
 
-// Ajouter un joueur
-function addPlayer() {
-    const name = playerNameInput.value.trim();
+// Ajouter une nouvelle ligne de joueur
+function addPlayerRow() {
+    const container = document.querySelector('.player-input-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'input-row';
+    newRow.innerHTML = `
+        <button class="remove-player-btn" onclick="removePlayerRow(this)">
+            <i class="fas fa-times"></i>
+        </button>
+        <input type="text" class="player-name-input" placeholder="Nom du joueur" maxlength="20">
+        <div class="level-buttons">
+            <button class="level-btn" data-level="1">1</button>
+            <button class="level-btn" data-level="2">2</button>
+            <button class="level-btn" data-level="3">3</button>
+            <button class="level-btn" data-level="4">4</button>
+            <button class="level-btn" data-level="5">5</button>
+            <button class="level-btn" data-level="6">6</button>
+            <button class="level-btn" data-level="7">7</button>
+            <button class="level-btn" data-level="8">8</button>
+            <button class="level-btn" data-level="9">9</button>
+            <button class="level-btn" data-level="10">10</button>
+        </div>
+    `;
     
-    if (!name) {
-        showNotification('Veuillez entrer un nom de joueur', 'error');
+    container.appendChild(newRow);
+    setupLevelButtons();
+}
+
+// Supprimer une ligne de joueur
+function removePlayerRow(button) {
+    const row = button.closest('.input-row');
+    row.remove();
+}
+
+// Ajouter tous les joueurs
+function addAllPlayers() {
+    const inputRows = document.querySelectorAll('.input-row');
+    let addedCount = 0;
+    let errors = [];
+    
+    inputRows.forEach((row, index) => {
+        const nameInput = row.querySelector('.player-name-input');
+        const selectedLevelBtn = row.querySelector('.level-btn.selected');
+        
+        const name = nameInput.value.trim();
+        const level = selectedLevelBtn ? parseInt(selectedLevelBtn.dataset.level) : null;
+        
+        if (!name) {
+            errors.push(`Ligne ${index + 1}: Nom manquant`);
+            return;
+        }
+        
+        if (!level) {
+            errors.push(`Ligne ${index + 1}: Niveau non sélectionné`);
+            return;
+        }
+        
+        if (players.some(player => player.name.toLowerCase() === name.toLowerCase())) {
+            errors.push(`Ligne ${index + 1}: Nom "${name}" déjà existant`);
+            return;
+        }
+        
+        const player = {
+            id: Date.now() + index,
+            name: name,
+            rating: level
+        };
+        
+        players.push(player);
+        addedCount++;
+    });
+    
+    if (errors.length > 0) {
+        showNotification(`Erreurs:\n${errors.join('\n')}`, 'error');
         return;
     }
     
-    if (players.some(player => player.name.toLowerCase() === name.toLowerCase())) {
-        showNotification('Ce nom de joueur existe déjà', 'error');
-        return;
+    if (addedCount > 0) {
+        updatePlayersList();
+        updatePlayerCount();
+        updateGenerateButton();
+        savePlayers();
+        showPreview();
+        showNotification(`${addedCount} joueur(s) ajouté(s) avec succès`, 'success');
+        
+        // Réinitialiser les lignes
+        inputRows.forEach(row => {
+            const nameInput = row.querySelector('.player-name-input');
+            const levelButtons = row.querySelectorAll('.level-btn');
+            nameInput.value = '';
+            levelButtons.forEach(btn => btn.classList.remove('selected'));
+        });
+    } else {
+        showNotification('Aucun joueur valide à ajouter', 'warning');
     }
-    
-    const player = {
-        id: Date.now(),
-        name: name,
-        rating: currentRating
-    };
-    
-    console.log('Joueur ajouté:', player); // Debug
-    
-    players.push(player);
-    updatePlayersList();
-    updatePlayerCount();
-    updateGenerateButton();
-    
-    // Réinitialiser le formulaire
-    playerNameInput.value = '';
-    currentRating = 5;
-    updateStars(5);
-    
-    showNotification(`Joueur "${name}" ajouté avec succès`, 'success');
+}
+
+// Charger les joueurs sauvegardés
+function loadSavedPlayers() {
+    if (savedPlayers.length > 0) {
+        players = [...savedPlayers];
+        updatePlayersList();
+        updatePlayerCount();
+        showNotification(`${savedPlayers.length} joueurs chargés depuis la sauvegarde`, 'success');
+    }
+}
+
+// Sauvegarder les joueurs
+function savePlayers() {
+    localStorage.setItem('savedPlayers', JSON.stringify(players));
 }
 
 // Mettre à jour la liste des joueurs
@@ -136,9 +205,14 @@ function updatePlayersList() {
                     ${generateStarsHTML(player.rating)}
                 </div>
             </div>
-            <button class="remove-player" onclick="removePlayer(${player.id})">
-                <i class="fas fa-times"></i>
-            </button>
+            <div class="player-actions">
+                <button class="edit-player" onclick="editPlayer(${player.id})" title="Modifier">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="remove-player" onclick="removePlayer(${player.id})" title="Supprimer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
     `).join('');
 }
@@ -155,6 +229,29 @@ function generateStarsHTML(rating) {
     return starsHTML;
 }
 
+// Modifier un joueur
+function editPlayer(id) {
+    const player = players.find(p => p.id === id);
+    if (!player) return;
+    
+    const newName = prompt('Nouveau nom du joueur:', player.name);
+    if (newName && newName.trim() !== '') {
+        const newRating = prompt('Nouveau niveau (1-10):', player.rating);
+        const rating = parseInt(newRating);
+        
+        if (rating >= 1 && rating <= 10) {
+            player.name = newName.trim();
+            player.rating = rating;
+            updatePlayersList();
+            savePlayers();
+            showPreview();
+            showNotification(`Joueur "${player.name}" modifié`, 'success');
+        } else {
+            showNotification('Niveau invalide (1-10)', 'error');
+        }
+    }
+}
+
 // Supprimer un joueur
 function removePlayer(id) {
     const playerIndex = players.findIndex(player => player.id === id);
@@ -164,6 +261,8 @@ function removePlayer(id) {
         updatePlayersList();
         updatePlayerCount();
         updateGenerateButton();
+        savePlayers();
+        showPreview();
         showNotification(`Joueur "${playerName}" supprimé`, 'success');
     }
 }
@@ -180,6 +279,8 @@ function clearAllPlayers() {
         updatePlayersList();
         updatePlayerCount();
         updateGenerateButton();
+        savePlayers();
+        hidePreview();
         showNotification('Tous les joueurs ont été supprimés', 'success');
     }
 }
@@ -199,7 +300,91 @@ function updateGenerateButton() {
         minPlayers = teamCount * parseInt(playersPerTeam);
     }
     
-    generateTeamsBtn.disabled = players.length < minPlayers;
+    const hasEnoughPlayers = players.length >= minPlayers;
+    generateTeamsBtn.disabled = !hasEnoughPlayers;
+    shuffleTeamsBtn.disabled = !hasEnoughPlayers;
+}
+
+// Prévisualisation des équipes
+function showPreview() {
+    if (players.length === 0) {
+        hidePreview();
+        return;
+    }
+    
+    const teamCount = parseInt(teamCountSelect.value);
+    const playersPerTeam = playersPerTeamSelect.value;
+    
+    let minPlayers = teamCount;
+    if (playersPerTeam !== 'auto') {
+        minPlayers = teamCount * parseInt(playersPerTeam);
+    }
+    
+    if (players.length < minPlayers) {
+        hidePreview();
+        return;
+    }
+    
+    const teams = generateBalancedTeams(players, teamCount, playersPerTeam);
+    displayPreview(teams);
+}
+
+function hidePreview() {
+    const existingPreview = document.getElementById('teamsPreview');
+    if (existingPreview) {
+        existingPreview.remove();
+    }
+}
+
+function displayPreview(teams) {
+    hidePreview();
+    
+    const previewDiv = document.createElement('div');
+    previewDiv.id = 'teamsPreview';
+    previewDiv.className = 'teams-preview';
+    
+    const totalScore = teams.reduce((sum, team) => sum + team.score, 0);
+    const avgScore = totalScore / teams.length;
+    const maxScore = Math.max(...teams.map(team => team.score));
+    const minScore = Math.min(...teams.map(team => team.score));
+    const scoreDifference = maxScore - minScore;
+    
+    previewDiv.innerHTML = `
+        <h3><i class="fas fa-eye"></i> Prévisualisation des Équipes</h3>
+        <div class="preview-teams">
+            ${teams.map(team => `
+                <div class="preview-team">
+                    <div class="preview-team-header">
+                        <span class="preview-team-name">${team.name}</span>
+                        <span class="preview-team-score">${team.score}</span>
+                    </div>
+                    <div class="preview-team-players">
+                        ${team.players.map(player => `
+                            <div class="preview-team-player">
+                                <span>${player.name}</span>
+                                <div class="preview-player-rating">
+                                    ${generateStarsHTML(player.rating)}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        <div class="preview-stats">
+            <div class="stat-item">
+                <span class="stat-label">Différence max:</span>
+                <span class="stat-value ${scoreDifference <= 2 ? 'good' : scoreDifference <= 5 ? 'warning' : 'bad'}">${scoreDifference}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Score moyen:</span>
+                <span class="stat-value">${avgScore.toFixed(1)}</span>
+            </div>
+        </div>
+    `;
+    
+    const teamsSection = document.querySelector('.teams-section');
+    teamsSection.appendChild(previewDiv);
 }
 
 // Générer les équipes équilibrées
@@ -360,10 +545,34 @@ function displayTeams(teams) {
             
             <div class="teams-summary">
                 <h3>Résumé de l'équilibrage</h3>
-                <p>Nombre d'équipes: <strong>${teams.length}</strong></p>
-                <p>Différence de score max: <strong>${scoreDifference}</strong></p>
-                <p>Score total: <strong>${totalScore}</strong></p>
-                <p>Score moyen par équipe: <strong>${avgScore.toFixed(1)}</strong></p>
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <span class="stat-icon"><i class="fas fa-users"></i></span>
+                        <span class="stat-label">Équipes:</span>
+                        <span class="stat-value">${teams.length}</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="stat-icon"><i class="fas fa-balance-scale"></i></span>
+                        <span class="stat-label">Différence max:</span>
+                        <span class="stat-value ${scoreDifference <= 2 ? 'good' : scoreDifference <= 5 ? 'warning' : 'bad'}">${scoreDifference}</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="stat-icon"><i class="fas fa-calculator"></i></span>
+                        <span class="stat-label">Score total:</span>
+                        <span class="stat-value">${totalScore}</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="stat-icon"><i class="fas fa-chart-line"></i></span>
+                        <span class="stat-label">Score moyen:</span>
+                        <span class="stat-value">${avgScore.toFixed(1)}</span>
+                    </div>
+                </div>
+                <div class="equilibrium-indicator">
+                    <span class="indicator-label">Équilibrage:</span>
+                    <span class="indicator-value ${scoreDifference <= 2 ? 'excellent' : scoreDifference <= 5 ? 'good' : scoreDifference <= 8 ? 'fair' : 'poor'}">
+                        ${scoreDifference <= 2 ? 'Excellent' : scoreDifference <= 5 ? 'Bon' : scoreDifference <= 8 ? 'Correct' : 'À améliorer'}
+                    </span>
+                </div>
             </div>
         </div>
     `;
@@ -405,6 +614,7 @@ function showNotification(message, type = 'info') {
         transform: translateX(100%);
         transition: transform 0.3s ease;
         max-width: 300px;
+        white-space: pre-line;
     `;
     
     document.body.appendChild(notification);
@@ -451,4 +661,95 @@ function shuffleArray(array) {
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
+} 
+
+// Mélanger les équipes
+function shuffleTeams() {
+    if (players.length === 0) {
+        showNotification('Aucun joueur à mélanger', 'error');
+        return;
+    }
+    
+    // Mélanger aléatoirement les joueurs
+    players = shuffleArray(players);
+    updatePlayersList();
+    savePlayers();
+    showPreview();
+    showNotification('Joueurs mélangés aléatoirement', 'success');
+}
+
+// Exporter les joueurs
+function exportPlayers() {
+    if (players.length === 0) {
+        showNotification('Aucun joueur à exporter', 'error');
+        return;
+    }
+    
+    const dataStr = JSON.stringify(players, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `joueurs_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    showNotification('Joueurs exportés avec succès', 'success');
+}
+
+// Importer les joueurs
+function importPlayers() {
+    importFileInput.click();
+}
+
+function handleFileImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedPlayers = JSON.parse(e.target.result);
+            
+            if (!Array.isArray(importedPlayers)) {
+                throw new Error('Format de fichier invalide');
+            }
+            
+            // Vérifier la structure des joueurs
+            const validPlayers = importedPlayers.filter(player => 
+                player && typeof player.name === 'string' && 
+                typeof player.rating === 'number' && 
+                player.rating >= 1 && player.rating <= 10
+            );
+            
+            if (validPlayers.length === 0) {
+                throw new Error('Aucun joueur valide trouvé dans le fichier');
+            }
+            
+            // Ajouter les joueurs importés
+            const existingNames = players.map(p => p.name.toLowerCase());
+            const newPlayers = validPlayers.filter(player => 
+                !existingNames.includes(player.name.toLowerCase())
+            );
+            
+            if (newPlayers.length === 0) {
+                showNotification('Tous les joueurs existent déjà', 'warning');
+                return;
+            }
+            
+            players.push(...newPlayers);
+            updatePlayersList();
+            updatePlayerCount();
+            updateGenerateButton();
+            savePlayers();
+            showPreview();
+            
+            showNotification(`${newPlayers.length} joueurs importés avec succès`, 'success');
+            
+        } catch (error) {
+            showNotification(`Erreur lors de l'import: ${error.message}`, 'error');
+        }
+    };
+    
+    reader.readAsText(file);
+    event.target.value = ''; // Réinitialiser l'input
 } 

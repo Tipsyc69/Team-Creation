@@ -18,27 +18,33 @@
         <div class="main-content">
             <!-- Section d'ajout de joueur -->
             <div class="player-input-section">
-                <h2><i class="fas fa-user-plus"></i> Ajouter un Joueur</h2>
-                <div class="input-group">
-                    <input type="text" id="playerName" placeholder="Nom du joueur" maxlength="20">
-                    <div class="rating-container">
-                        <label>Niveau:</label>
-                        <div class="stars">
-                            <i class="fas fa-star" data-rating="1"></i>
-                            <i class="fas fa-star" data-rating="2"></i>
-                            <i class="fas fa-star" data-rating="3"></i>
-                            <i class="fas fa-star" data-rating="4"></i>
-                            <i class="fas fa-star" data-rating="5"></i>
-                            <i class="fas fa-star" data-rating="6"></i>
-                            <i class="fas fa-star" data-rating="7"></i>
-                            <i class="fas fa-star" data-rating="8"></i>
-                            <i class="fas fa-star" data-rating="9"></i>
-                            <i class="fas fa-star" data-rating="10"></i>
+                <h2><i class="fas fa-user-plus"></i> Ajouter des Joueurs</h2>
+                <div class="player-input-container">
+                    <div class="input-row">
+                        <button class="remove-player-btn" onclick="removePlayerRow(this)">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <input type="text" class="player-name-input" placeholder="Nom du joueur" maxlength="20">
+                        <div class="level-buttons">
+                            <button class="level-btn" data-level="1">1</button>
+                            <button class="level-btn" data-level="2">2</button>
+                            <button class="level-btn" data-level="3">3</button>
+                            <button class="level-btn" data-level="4">4</button>
+                            <button class="level-btn" data-level="5">5</button>
+                            <button class="level-btn" data-level="6">6</button>
+                            <button class="level-btn" data-level="7">7</button>
+                            <button class="level-btn" data-level="8">8</button>
+                            <button class="level-btn" data-level="9">9</button>
+                            <button class="level-btn" data-level="10">10</button>
                         </div>
-                        <span id="ratingValue">3</span>
                     </div>
-                    <button id="addPlayer" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Ajouter
+                </div>
+                <div class="add-player-controls">
+                    <button id="addPlayerRow" class="btn btn-secondary">
+                        <i class="fas fa-plus"></i> Ajouter une ligne
+                    </button>
+                    <button id="addAllPlayers" class="btn btn-primary">
+                        <i class="fas fa-users"></i> Ajouter tous les joueurs
                     </button>
                 </div>
             </div>
@@ -82,9 +88,21 @@
                     <button id="generateTeams" class="btn btn-success" disabled>
                         <i class="fas fa-magic"></i> Générer les Équipes
                     </button>
+                    <button id="shuffleTeams" class="btn btn-warning" disabled>
+                        <i class="fas fa-random"></i> Mélanger
+                    </button>
                     <button id="clearAll" class="btn btn-danger">
                         <i class="fas fa-trash"></i> Tout Effacer
                     </button>
+                </div>
+                <div class="advanced-controls">
+                    <button id="exportPlayers" class="btn btn-secondary">
+                        <i class="fas fa-download"></i> Exporter
+                    </button>
+                    <button id="importPlayers" class="btn btn-secondary">
+                        <i class="fas fa-upload"></i> Importer
+                    </button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;">
                 </div>
                 <div id="teamsResult" class="teams-result"></div>
             </div>
