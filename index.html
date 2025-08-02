@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur d'Équipes Équilibrées</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-gamepad"></i> Générateur d'Équipes</h1>
+            <p class="subtitle">Créez des équipes équilibrées pour vos parties</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Section d'ajout de joueur -->
+            <div class="player-input-section">
+                <h2><i class="fas fa-user-plus"></i> Ajouter un Joueur</h2>
+                <div class="input-group">
+                    <input type="text" id="playerName" placeholder="Nom du joueur" maxlength="20">
+                    <div class="rating-container">
+                        <label>Niveau:</label>
+                        <div class="stars">
+                            <i class="fas fa-star" data-rating="1"></i>
+                            <i class="fas fa-star" data-rating="2"></i>
+                            <i class="fas fa-star" data-rating="3"></i>
+                            <i class="fas fa-star" data-rating="4"></i>
+                            <i class="fas fa-star" data-rating="5"></i>
+                        </div>
+                        <span id="ratingValue">3</span>
+                    </div>
+                    <button id="addPlayer" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Ajouter
+                    </button>
+                </div>
+            </div>
+
+            <!-- Liste des joueurs -->
+            <div class="players-section">
+                <h2><i class="fas fa-users"></i> Joueurs (<span id="playerCount">0</span>)</h2>
+                <div id="playersList" class="players-list">
+                    <div class="empty-state">
+                        <i class="fas fa-user-friends"></i>
+                        <p>Aucun joueur ajouté</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Génération d'équipes -->
+            <div class="teams-section">
+                <h2><i class="fas fa-shield-alt"></i> Génération d'Équipes</h2>
+                <div class="teams-controls">
+                    <button id="generateTeams" class="btn btn-success" disabled>
+                        <i class="fas fa-magic"></i> Générer les Équipes
+                    </button>
+                    <button id="clearAll" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Tout Effacer
+                    </button>
+                </div>
+                <div id="teamsResult" class="teams-result"></div>
+            </div>
+        </div>
+
+        <!-- Modal pour afficher les équipes -->
+        <div id="teamsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-trophy"></i> Équipes Générées</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="teamsDisplay"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
