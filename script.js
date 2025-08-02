@@ -14,6 +14,8 @@ const clearAllBtn = document.getElementById('clearAll');
 const teamsModal = document.getElementById('teamsModal');
 const teamsDisplay = document.getElementById('teamsDisplay');
 const closeModal = document.querySelector('.close');
+const teamCountSelect = document.getElementById('teamCount');
+const playersPerTeamSelect = document.getElementById('playersPerTeam');
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', function() {
@@ -73,6 +75,10 @@ function setupEventListeners() {
             addPlayer();
         }
     });
+    
+    // Mettre à jour le bouton quand la configuration change
+    teamCountSelect.addEventListener('change', updateGenerateButton);
+    playersPerTeamSelect.addEventListener('change', updateGenerateButton);
 }
 
 // Ajouter un joueur
@@ -185,60 +191,92 @@ function updatePlayerCount() {
 
 // Mettre à jour le bouton de génération
 function updateGenerateButton() {
-    generateTeamsBtn.disabled = players.length < 2;
+    const teamCount = parseInt(teamCountSelect.value);
+    const playersPerTeam = playersPerTeamSelect.value;
+    
+    let minPlayers = teamCount;
+    if (playersPerTeam !== 'auto') {
+        minPlayers = teamCount * parseInt(playersPerTeam);
+    }
+    
+    generateTeamsBtn.disabled = players.length < minPlayers;
 }
 
 // Générer les équipes équilibrées
 function generateTeams() {
-    if (players.length < 2) {
-        showNotification('Il faut au moins 2 joueurs pour former des équipes', 'error');
+    const teamCount = parseInt(teamCountSelect.value);
+    const playersPerTeam = playersPerTeamSelect.value;
+    
+    let minPlayers = teamCount;
+    if (playersPerTeam !== 'auto') {
+        minPlayers = teamCount * parseInt(playersPerTeam);
+    }
+    
+    if (players.length < minPlayers) {
+        showNotification(`Il faut au moins ${minPlayers} joueurs pour former ${teamCount} équipes`, 'error');
         return;
     }
     
-    const teams = generateBalancedTeams(players);
+    const teams = generateBalancedTeams(players, teamCount, playersPerTeam);
     displayTeams(teams);
     teamsModal.style.display = 'block';
 }
 
 // Algorithme de génération d'équipes équilibrées
-function generateBalancedTeams(players) {
+function generateBalancedTeams(players, teamCount, playersPerTeam) {
     // Trier les joueurs par niveau (du plus fort au plus faible)
     const sortedPlayers = [...players].sort((a, b) => b.rating - a.rating);
     
-    // Calculer le score total
-    const totalScore = sortedPlayers.reduce((sum, player) => sum + player.rating, 0);
-    const targetScore = totalScore / 2;
+    // Calculer le nombre de joueurs par équipe
+    let playersPerTeamCount = Math.floor(players.length / teamCount);
+    if (playersPerTeam !== 'auto') {
+        playersPerTeamCount = parseInt(playersPerTeam);
+    }
     
-    // Algorithme glouton pour équilibrer les équipes
-    let team1 = [];
-    let team2 = [];
-    let team1Score = 0;
-    let team2Score = 0;
+    // Créer les équipes
+    const teams = [];
+    for (let i = 0; i < teamCount; i++) {
+        teams.push({
+            players: [],
+            score: 0,
+            name: `Équipe ${getTeamName(i + 1)}`
+        });
+    }
     
+    // Répartir les joueurs de manière équilibrée
+    let currentTeam = 0;
     for (let player of sortedPlayers) {
-        if (team1Score <= team2Score) {
-            team1.push(player);
-            team1Score += player.rating;
-        } else {
-            team2.push(player);
-            team2Score += player.rating;
+        // Trouver l'équipe avec le score le plus faible
+        let minScoreTeam = 0;
+        let minScore = Infinity;
+        
+        for (let i = 0; i < teams.length; i++) {
+            if (teams[i].players.length < playersPerTeamCount && teams[i].score < minScore) {
+                minScore = teams[i].score;
+                minScoreTeam = i;
+            }
         }
+        
+        // Si toutes les équipes ont le bon nombre de joueurs, prendre celle avec le score le plus faible
+        if (teams[minScoreTeam].players.length >= playersPerTeamCount) {
+            for (let i = 0; i < teams.length; i++) {
+                if (teams[i].score < minScore) {
+                    minScore = teams[i].score;
+                    minScoreTeam = i;
+                }
+            }
+        }
+        
+        teams[minScoreTeam].players.push(player);
+        teams[minScoreTeam].score += player.rating;
     }
     
-    // Optimisation : essayer d'améliorer l'équilibre
-    const difference = Math.abs(team1Score - team2Score);
-    if (difference > 1) {
-        // Essayer de trouver une meilleure combinaison
-        const optimizedTeams = optimizeTeams(sortedPlayers, targetScore);
-        if (optimizedTeams) {
-            return optimizedTeams;
-        }
-    }
-    
-    return {
-        team1: { players: team1, score: team1Score, name: "Équipe Alpha" },
-        team2: { players: team2, score: team2Score, name: "Équipe Beta" }
-    };
+    return teams;
+}
+
+function getTeamName(index) {
+    const teamNames = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon'];
+    return teamNames[index - 1] || `Team ${index}`;
 }
 
 // Fonction d'optimisation des équipes
@@ -293,49 +331,39 @@ function generateCombinations(arr, size) {
 
 // Afficher les équipes
 function displayTeams(teams) {
-    const { team1, team2 } = teams;
+    const totalScore = teams.reduce((sum, team) => sum + team.score, 0);
+    const avgScore = totalScore / teams.length;
+    const maxScore = Math.max(...teams.map(team => team.score));
+    const minScore = Math.min(...teams.map(team => team.score));
+    const scoreDifference = maxScore - minScore;
     
     teamsDisplay.innerHTML = `
         <div class="teams-display">
-            <div class="team">
-                <div class="team-header">
-                    <span class="team-name">${team1.name}</span>
-                    <span class="team-score">Score: ${team1.score}</span>
-                </div>
-                <div class="team-players">
-                    ${team1.players.map(player => `
-                        <div class="team-player">
-                            <span class="team-player-name">${player.name}</span>
-                            <div class="team-player-rating">
-                                ${generateStarsHTML(player.rating)}
+            ${teams.map(team => `
+                <div class="team">
+                    <div class="team-header">
+                        <span class="team-name">${team.name}</span>
+                        <span class="team-score">Score: ${team.score}</span>
+                    </div>
+                    <div class="team-players">
+                        ${team.players.map(player => `
+                            <div class="team-player">
+                                <span class="team-player-name">${player.name}</span>
+                                <div class="team-player-rating">
+                                    ${generateStarsHTML(player.rating)}
+                                </div>
                             </div>
-                        </div>
-                    `).join('')}
+                        `).join('')}
+                    </div>
                 </div>
-            </div>
-            
-            <div class="team">
-                <div class="team-header">
-                    <span class="team-name">${team2.name}</span>
-                    <span class="team-score">Score: ${team2.score}</span>
-                </div>
-                <div class="team-players">
-                    ${team2.players.map(player => `
-                        <div class="team-player">
-                            <span class="team-player-name">${player.name}</span>
-                            <div class="team-player-rating">
-                                ${generateStarsHTML(player.rating)}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
+            `).join('')}
             
             <div class="teams-summary">
                 <h3>Résumé de l'équilibrage</h3>
-                <p>Différence de score: <strong>${Math.abs(team1.score - team2.score)}</strong></p>
-                <p>Score total: <strong>${team1.score + team2.score}</strong></p>
-                <p>Score moyen par équipe: <strong>${((team1.score + team2.score) / 2).toFixed(1)}</strong></p>
+                <p>Nombre d'équipes: <strong>${teams.length}</strong></p>
+                <p>Différence de score max: <strong>${scoreDifference}</strong></p>
+                <p>Score total: <strong>${totalScore}</strong></p>
+                <p>Score moyen par équipe: <strong>${avgScore.toFixed(1)}</strong></p>
             </div>
         </div>
     `;

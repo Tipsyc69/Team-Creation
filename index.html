@@ -54,9 +54,30 @@
                 </div>
             </div>
 
-            <!-- Génération d'équipes -->
+            <!-- Configuration des équipes -->
             <div class="teams-section">
-                <h2><i class="fas fa-shield-alt"></i> Génération d'Équipes</h2>
+                <h2><i class="fas fa-shield-alt"></i> Configuration des Équipes</h2>
+                <div class="teams-config">
+                    <div class="config-group">
+                        <label for="teamCount">Nombre d'équipes:</label>
+                        <select id="teamCount" class="config-select">
+                            <option value="2">2 équipes</option>
+                            <option value="3">3 équipes</option>
+                            <option value="4">4 équipes</option>
+                            <option value="5">5 équipes</option>
+                        </select>
+                    </div>
+                    <div class="config-group">
+                        <label for="playersPerTeam">Joueurs par équipe:</label>
+                        <select id="playersPerTeam" class="config-select">
+                            <option value="auto">Auto (équilibré)</option>
+                            <option value="2">2 joueurs</option>
+                            <option value="3">3 joueurs</option>
+                            <option value="4">4 joueurs</option>
+                            <option value="5">5 joueurs</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="teams-controls">
                     <button id="generateTeams" class="btn btn-success" disabled>
                         <i class="fas fa-magic"></i> Générer les Équipes
