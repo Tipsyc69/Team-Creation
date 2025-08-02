@@ -27,7 +27,7 @@ function initializeStars() {
     const stars = starsContainer.querySelectorAll('i');
     
     // Définir la note initiale
-    updateStars(3);
+    updateStars(5);
     
     // Ajouter les événements de clic
     stars.forEach(star => {
@@ -104,8 +104,8 @@ function addPlayer() {
     
     // Réinitialiser le formulaire
     playerNameInput.value = '';
-    currentRating = 3;
-    updateStars(3);
+    currentRating = 5;
+    updateStars(5);
     
     showNotification(`Joueur "${name}" ajouté avec succès`, 'success');
 }
@@ -139,7 +139,7 @@ function updatePlayersList() {
 
 function generateStarsHTML(rating) {
     let starsHTML = '';
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
         if (i < rating) {
             starsHTML += `<i class="fas fa-star active"></i>`;
         } else {
